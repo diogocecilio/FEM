@@ -261,19 +261,28 @@ deformed=(Flatten[nnodes]+scale sol);
 tabdeformed=Table[{deformed[[i]],deformed[[i+1]]},{i,1,Length[deformed],2}];
 meshVisDef=Graphics[{FaceForm[{LightRed,Opacity[3]}],EdgeForm[Red],GraphicsComplex[tabdeformed,Polygon[topol[[All,{1,2,3}]]]]}];
 Show[meshVisDef,meshVis1]
+10^4 sol//Chop
 (****************************************************************************************)
 
 (*RESULTS OF EXAMPLE 3*)
-10^4 sol//Chop
 {{{0,0},{120,0},{120,160}},{{0,0},{120,160},{0,160}}}
 {{1,2,3},{1,3,4}}
 {{0,0},{120,0},{120,160},{0,160}}
 {0,0,11.2911,1.96367,10.1129,-1.08002,0,0}
+(****************************************************************************************)
 
-
-
+(*COPY AND PASTE - EXAMPLE 4*)
 eltype=1;
-order=1;h=1;a=10;b=2;young=30 10^6;(*Young modulus-psi*)nu=0.25;mu=young/(2(1+nu));lambda=young nu/((1+nu)(1-2nu));(*Lamé Constants-psi*)(*Mesh Generation and visualization*)order1=1;
+order=1;
+h=1;
+a=10;
+b=2;
+young=30 10^6;(*Young modulus-psi*)
+nu=0.25;
+mu=young/(2(1+nu));
+lambda=young nu/((1+nu)(1-2nu));(*Lamé Constants-psi*)
+(*Mesh Generation and visualization - order 1*)
+order1=1;
 {allcoords1,meshnodes1,meshtopology1}=GenerateGridMesh[a,b,5,3,order1];
 {allcoords2,meshnodes2,meshtopology2}=GenerateGridMesh[a,b,9,3,order1];
 {allcoords3,meshnodes3,meshtopology3}=GenerateGridMesh[a,b,17,3,order1];
@@ -283,6 +292,7 @@ order=1;h=1;a=10;b=2;young=30 10^6;(*Young modulus-psi*)nu=0.25;mu=young/(2(1+nu
 Show[meshvis1,nodevis1]
 Show[meshvis2,nodevis2]
 Show[meshvis3,nodevis3]
+(*Mesh Generation and visualization - order 2*)
 order2=2;
 {allcoords4,meshnodes4,meshtopology4}=GenerateGridMesh[a,b,3,2,order2];
 {allcoords5,meshnodes5,meshtopology5}=GenerateGridMesh[a,b,5,2,order2];
@@ -320,12 +330,9 @@ K6=ApplyNodeBCDisplacement[K6,{17,34,51},{{{BIG,1},{1,BIG}},{{BIG,1},{1,BIG}},{{
 sol1=LinearSolve[K1,F1,Method->"Cholesky"];sol2=LinearSolve[K2,F2,Method->"Cholesky"];sol3=LinearSolve[K3,F3,Method->"Cholesky"];
 sol4=LinearSolve[K4,F4,Method->"Cholesky"];sol5=LinearSolve[K5,F5,Method->"Cholesky"];sol6=LinearSolve[K6,F6,Method->"Cholesky"];
 TableForm[{{"","Linear","Reference","Quadratic","Reference"},{"15 nodes",SetPrecision[-sol1[[2 2]]100,4],0.3134,SetPrecision[-sol4[[6 2]]100,4],0.5031},{"27 nodes",SetPrecision[-sol2[[2 2]]100,4],0.4388,SetPrecision[-sol5[[10 2]]100,4],0.5129},{"51 nodes",SetPrecision[-sol3[[2 2]]100,4],0.4878,SetPrecision[-sol6[[18 2]]100,4],0.5137}}]
+(****************************************************************************************)
 
-
-
-
-
-
+(*RESULTS OF EXAMPLE 4*)
 	Linear	Reference	Quadratic	Reference
 15 nodes	0.3104	0.3134	0.4973	0.5031
 27 nodes	0.4350	0.4388	0.5086	0.5129
