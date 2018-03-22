@@ -340,15 +340,19 @@ TableForm[{{"","Linear","Reference","Quadratic","Reference"},{"15 nodes",SetPrec
 (****************************************************************************************)
 
 (*COPY AND PASTE - EXAMPLE 5*)
+(*ATTENTION: THE CODE BELOW NEEDS 2 FILES: "elschapacomfuroleft.txt" AND "noschapacomfuroleft.txt"*)
+(*DOWNLOAD AND ADJUST THE PATH BEFORE USING*)
+(*load mesh*)
 pack=Developer`ToPackedArray;
 topol=pack@Transpose@Drop[Transpose@Import["C:\\Paper-Diogo-Thiago\\elschapacomfuroleft.txt","Table"],1];
 nnodesAll=Import["C:\\Paper-Diogo-Thiago\\noschapacomfuroleft.txt","Table"];
 nnodes=pack@N[nnodesAll[[All,{2,3}]]];
 allcoords=ParallelTable[nnodes[[topol[[i]][[j]]]],{i,1,Length[topol]},{j,1,9}];
-(*edges are straight*)
+(*edges are straight. Print mesh*)
 meshVis1=Graphics[{FaceForm[],EdgeForm[Blue],GraphicsComplex[nnodes,Polygon[topol[[All,{1,2,3,4}]]]]}];
 nodeVis=Graphics[{MapIndexed[Text[#2[[1]],#1,{-1,1}]&,nnodes],{Blue,Point[nnodes]}}];
 mesh=Show[meshVis1,nodeVis]
+(*stiffness matrix and load vector. Print stiffness matrix*)
 h=1;
 order=2;
 eltype=1;
@@ -361,8 +365,7 @@ eltype=1;
 (*AbsoluteTiming[Assemble[allcoords,topol,order,forcing,eltype];]*)
 {KE,FE}=Assemble[allcoords,nnodes,topol,order,eltype];
 matrix=MatrixPlot[KE]
-
-
+(*find nodes to impose BC*)
 FindIds[nodes_,coords_]:=Block[{nodestofind=Nearest[nodes,coords][[All,1]]},Flatten[Position[nodes,Alternatives@@nodestofind]]]
 nodetofind={{300,0},{0,300}};
 {hole1,hole2}=FindIds[nnodes,nodetofind]
@@ -370,9 +373,11 @@ nodetofind={{300,0},{1000,0}};
 {inferiorline1,inferiorline2}=FindIds[nnodes,nodetofind]
 nodetofind={{0,300},{0,1000}};
 {leftline1,leftline2}=FindIds[nnodes,nodetofind]
+(*nodes found*)
 {870,871}
 {644,870}
 {645,871}
+(*find element to impose BC*)
 FindLineElemens[id1_,id2_,nnodes_,order_]:=Block[{h1,h2,allids,Flag,A,B,tol,i,ids,nodesvec,linenodes,temp1,temp2,elsvec,idsvec,nodes,newout,norm},
 A=nnodes[[id1]];
 B=nnodes[[id2]];
@@ -429,6 +434,8 @@ AppendTo[nodes,temp2];
 ,{i,1,Length[linenodes]}];
 {nodesvec,idsvec,allids}
 ];
+
+(*insert Dirichlet*)
 ContributeLineDirichlet[EK_,EF_,nodes_,id1_,id2_,ek_,ef_,order_]:=Block[{nodevec,idsvec,x1,x2,y1,y2,Ef=EF,Ek=EK,els,ids,el,i,shapes,xx,J,xi,xix,w,integralxi1,vecPtosPesos,co,newco,j,k},
 {nodevec,idsvec,ids}=FindLineElemens[id1,id2,nodes,order];
 idsd2=ids;
@@ -443,6 +450,8 @@ Ef[[2ids[[i]] +j-2]]=ef[[j]];
 ];
 {Ek,Ef}
 ];
+
+(*Modification of Compute Shape*)
 ComputeShape[order_,var_]:=Block[{npoints},
 npoints=order+1;
 tab3[i_,n_]:=Table[If[j==i,1,0],{j,1,n}];
@@ -450,16 +459,19 @@ poli3[j_,n_]:=Table[{-1+2 (i-1)/(n-1),tab3[j,n][[i]]},{i,1,n}];
 ListPoli[n_]:=Table[InterpolatingPolynomial[poli3[i,n],var],{i,1,n}];
 ListPoli[npoints]
 ]
+
+(*Compute Normals*)
 ComputeNormals[pt_]:=Block[{lines,x,delta,intdata,R=300,normal,v},
 Clear[r];
 rr[x_]=-(x/Sqrt[R^2-0.999999999999999x^2]);
-
 pervec[v_]:={-(v[[2]]/Norm[v]),v[[1]]/Norm[v]};
 lines=rr[pt[[1]]](x-pt[[1]])+ pt[[2]];
 delta=10^-8;
 normal=({pt[[1]]+delta,lines/.x->pt[[1]]+delta}-{pt[[1]],lines/.x->pt[[1]]})/Norm[({pt[[1]]+delta,lines/.x->pt[[1]]+delta}-{pt[[1]],lines/.x->pt[[1]]})];
 pervec[normal]
 ]
+
+(*Insert Newmann Pressure*)
 ContributeLineNewmanPressure[EF_,fx_,nodes_,order_,id1_,id2_]:=Block[{vecnodes,idsvec,ids,normal,coordinates,temp=0,co,el,i,shapes,xi,x0,y0,xf,yf,h,cos,sin,vertOrHor,x,J,vecPtosPesos,xix,w,integral,Ef=EF},
 sumx=0.;
 sumy=0.;
@@ -500,22 +512,29 @@ Ef[[ idsvec[[i,j]] 2]]+=integral[[j]]normal[[2]];
 ];
 Ef
 ];
+
+(*Insert BC*)
 FE=Table[0,{Length[KE]}];
 {KE,FE}=ContributeLineDirichlet[KE,FE,nnodes,inferiorline1,inferiorline2,{{1,1},{1,10^12}},{0,0},order];
 {KE,FE}=ContributeLineDirichlet[KE,FE,nnodes,leftline1,leftline2,{{10^12,1},{1,1}},{0,0},order];
+
 f[pt_]:=-10;
 (*FE=ContributeLineNewman[FE,f,nnodes,order,hole1,hole2];*)
 FE=ContributeLineNewmanPressure[FE,f,nnodes,order,hole2,hole1];
-Sum[FE[[i]],{i,1,Length[FE]}]
+Sum[FE[[i]],{i,1,Length[FE]}];
+
+(*Solve linear system*)
 sol=LinearSolve[KE,FE,Method->"Banded"];
 scale=2000;
 deformed=(Flatten[nnodes]+scale sol);
 tabdeformed=ParallelTable[{ deformed[[i]], deformed[[i+1]]},{i,1,Length[deformed],2}];
 meshVis1=Graphics[{FaceForm[],EdgeForm[{Dashed}],GraphicsComplex[nnodes,Polygon[topol[[All,{1,2,3,4}]]]]}];
 meshVisDef=Graphics[{FaceForm[{Gray,Opacity[0.1]}],EdgeForm[Black],GraphicsComplex[tabdeformed,Polygon[topol[[All,{1,2,3,4}]]]]}];
-defplussundef=Show[meshVisDef,meshVis1,ImageSize->Large]
--5995.72
 
+(*print original and deformed mesh*)
+defplussundef=Show[meshVisDef,meshVis1,ImageSize->Large]
+
+(*Function for post process*)
 ComputeSol[topol_,coords_,order_,coefs_,eltype_]:=Block[{X,InvJ,GradPhi,GradPsi,nels,dsol,xa,xb,k=0,i,phi,sol,phisz,j,xx,J,co,h,x=0,psis,id,y=0,xi,eta,Jac,DetJac,kk},
 {psis,GradPsi}=Compute2DShape[order,eltype];
 nels=Length[topol];
@@ -553,8 +572,9 @@ X[[i,2]]=y;
 ,{i,1,nels}];
 {sol,dsol,X}
 ]
-ComputeStress[dsol_,young_,nu_]:=Block[{strain,gradu,lambda=young nu/((1+nu)(1-2 nu)),mu=young/(2(1+nu)),dudx,dudy,dvdx,dvdy,i,eps,stress,ex,ey,exy,C},
 
+(*Function to compute stress*)
+ComputeStress[dsol_,young_,nu_]:=Block[{strain,gradu,lambda=young nu/((1+nu)(1-2 nu)),mu=young/(2(1+nu)),dudx,dudy,dvdx,dvdy,i,eps,stress,ex,ey,exy,C},
 strain=Table[0,{Length[dsol]}];
 stress=Table[0,{Length[dsol]}];
 For[i=1,i<=Length[dsol],i++,
@@ -573,11 +593,12 @@ stress[[i]]=C.strain;
 ];
 {stress,strain}
 ];
+
+(*Function to compute solution*)
 computesollist[X_,sols_,sx_]:=Block[{refine,sollists,v,x,y,s,sollist},
 sollists={};
 refine=1/3.;
 v=Table[{xi,eta},{xi,0,1,refine},{eta,1-xi,0,refine}];
-
 refine=1/2.;
 v=Table[{xi,eta},{xi,-1,1,refine},{eta,-1,1,refine}];
 sollists=Table[0,{Length[X]}];
@@ -593,9 +614,12 @@ sollists[[i]]=sollist;
 ,{i,1,Length[X]}];
 sollists
 ]
+
+(*Compute solution and stress*)
 {sols,dsols,X}=ComputeSol[topol,nnodes,order,sol,eltype]//Simplify//Chop;
 stress=ComputeStress[dsols,young,nu][[1]];
 
+(*post process*)
 lpd=Show[Graphics[{GrayLevel[1],Disk[{0,0},300]},AspectRatio->Automatic]];
 tabux=computesollist[X,sols,1];
 tabuy=computesollist[X,sols,2];
