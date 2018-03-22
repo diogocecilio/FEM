@@ -337,8 +337,9 @@ TableForm[{{"","Linear","Reference","Quadratic","Reference"},{"15 nodes",SetPrec
 15 nodes	0.3104	0.3134	0.4973	0.5031
 27 nodes	0.4350	0.4388	0.5086	0.5129
 51 nodes	0.4840	0.4878	0.5104	0.5137
+(****************************************************************************************)
 
-
+(*COPY AND PASTE - EXAMPLE 5*)
 pack=Developer`ToPackedArray;
 topol=pack@Transpose@Drop[Transpose@Import["C:\\Paper-Diogo-Thiago\\elschapacomfuroleft.txt","Table"],1];
 nnodesAll=Import["C:\\Paper-Diogo-Thiago\\noschapacomfuroleft.txt","Table"];
